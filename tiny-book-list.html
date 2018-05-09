@@ -1,0 +1,197 @@
+<!-- Component to display a list of books -->
+<link rel="import" href="./bower_components/polymer/polymer.html">
+<link rel="import" href="./bower_components/paper-card/paper-card.html">
+<link rel="import" href="./bower_components/paper-button/paper-button.html">
+<link rel="import" href="./bower_components/paper-styles/color.html">
+<link rel="import" href="./bower_components/paper-styles/typography.html">
+<link rel="import" href="./bower_components/paper-styles/color.html">
+<link rel="import" href="./bower_components/paper-dialog/paper-dialog.html">
+<link rel="import" href="./bower_components/paper-input/paper-input.html">
+<link rel="import" href="./bower_components/paper-icon-button/paper-icon-button.html">
+<link rel="import" href="./bower_components/iron-flex-layout/iron-flex-layout.html">
+<link rel="import" href="./bower_components/iron-icons/iron-icons.html">
+<link rel="import" href="./bower_components/iron-flex-layout/iron-flex-layout-classes.html">
+
+<dom-module id="tiny-book-list">
+    <template>
+        <style include="iron-flex"></style>
+        <style>
+            :host {
+                width: 100%;
+                position: relative;
+                display: block;
+            }
+            
+            paper-card {
+                margin:5px;
+                min-width: 32%;
+                max-width: 32%;
+            }
+            
+            :host paper-card {
+                --paper-card-header-image:{
+                    height: 300px;
+                    object-fit:contain;
+                }
+            }
+            
+            div.book-card-info {
+                height: 100%;
+                display: inline-block;
+                padding-right: 10px;
+                text-align: right;
+            }
+            
+            div.book-card-title {
+                @apply --paper-font-headline;
+            }
+            
+            div.book-list-content {
+                position: relative;
+                width: 100%;
+                justify-content: space-around;
+            }
+            
+            paper-button {
+                width: 32%;
+            }
+
+            paper-button.danger {
+                background-color : var(--paper-red-400);
+                color : white;
+            }
+            paper-button.success {
+                background-color : var(--paper-green-400);
+                color : white;  
+            }
+
+            paper-button.info {
+                background-color : var(--paper-indigo-400);
+                color : white;
+            }
+
+            paper-button.warning {
+                background-color : var(--paper-orange-400);
+                color : white;
+            }
+            
+            .buttonNew {
+                background-color : #d50000;
+                color : white;
+                border-radius: 50%;
+                position: fixed;
+                width: 50px;
+                height: 50px;
+                right: 10px;
+                bottom: 10px;
+            }
+
+            paper-button > a {
+                text-decoration: none;
+                color:white;
+            }
+
+            paper-dialog{
+                width: 70%;
+            }
+
+            paper-dialog > h2 {
+                border-bottom: 1px solid grey;
+            }
+
+        </style>
+        <div>
+            <paper-dialog id="dialog" modal="true">
+                <h2>{{action}}</h2>
+                <paper-input always-float-label label="Author" value="{{modifiedBook.author}}"></paper-input>
+                <paper-input always-float-label label="Title" value="{{modifiedBook.title}}"></paper-input>
+                <paper-input always-float-label label="Url" value="{{modifiedBook.url}}"></paper-input>
+                <paper-input label="Price" value="{{modifiedBook.price}}"></paper-input>
+                <paper-input type="file" id="imgfile"></paper-input>
+                <div class="buttons">
+                    <paper-button dialog-dismiss class="warning" >Cancel</paper-button>
+                    <paper-button dialog-confirm on-click="saveDoc" class="success" autofocus>Accept</paper-button>
+                </div>
+            </paper-dialog>
+            <template is="dom-repeat" items="{{books}}">
+                <paper-card image="data:image/jpeg;base64,{{item.img.data}}" alt="image livre">
+                    <div class="card-content">
+                        <div class="book-card-title">{{item.title}}</div>
+                        <div class="book-card-info-author">{{item.author}}</div>
+                        <div class="book-card-info-price">{{item.price}}&euro;</div>
+                    </div>
+                    <div class="card-actions">
+                        <div class="horizontal around-justified layout">
+                            <paper-button on-click="supprimer" class="danger">Supprimer</paper-button>
+                            <paper-button on-click="openUpdate" class="info">Modifier</paper-button>
+                            <paper-button class="success"><a href$="{{item.url}}" target="_blank">Acheter</a></paper-button>
+                        </div>
+                    </div>
+                </paper-card>
+            </template>
+        </div>
+        <paper-icon-button raised on-click="openNew" icon="add" class="buttonNew"></paper-icon-button>
+    </template>
+    
+    <script>
+        class TinyBookList extends Polymer.Element {
+            
+            static get is() { return "tiny-book-list"; }
+            static get properties() {
+                return {
+                    books: {
+                        type: Array,
+                        notify: true
+                    },
+                    modifiedBook: {
+                        type: Array,
+                        notify: true
+                    },
+                    action: {
+                        type: String,
+                        notify: true
+                    }
+                }
+            }
+
+            constructor() {
+                super();
+            }
+
+            //Send an event to delete a book in the db
+            supprimer(e) {
+                this.dispatchEvent(new CustomEvent('deleteObject', {bubbles: true, composed: true, detail:{model: e.model.__data.item}}));
+            }
+
+            //Send an event save a book (new or update) in the db
+            saveDoc(e){
+                //Récupération de l'image et réinitialisation du champ
+                const img = this.$.imgfile.inputElement.inputElement.files[0];
+                this.dispatchEvent(new CustomEvent('saveObject', { bubbles: true, composed: true, detail: { model: this.modifiedBook, image: img }}));
+            }
+
+            //Open the modal to update a book
+            openUpdate(e) {
+                this.action = "Modifier";
+                this.modifiedBook = e.model.__data.item;
+                this.$.dialog.open();
+            }
+
+            //Open the modal to add a book
+            openNew(e){
+                this.action = "Ajouter";
+                this.modifiedBook = {
+                    author: "",
+                    url: "",
+                    _id: undefined,
+                    price: undefined,
+                    title: "",
+                    img: {}
+                };
+                this.$.dialog.open();
+            }
+        };
+
+        customElements.define(TinyBookList.is, TinyBookList);
+    </script>
+</dom-module>

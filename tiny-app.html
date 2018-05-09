@@ -1,0 +1,65 @@
+<!-- Base app component -->
+<link rel="import"href="bower_components/polymer/polymer.html">
+<link rel="import"href="bower_components/app-layout/app-header/app-header.html">
+<link rel="import"href="bower_components/app-layout/app-toolbar/app-toolbar.html">
+<link rel="import"href="bower_components/paper-card/paper-card.html">
+<link rel="import"href="bower_components/iron-flex-layout/iron-flex-layout.html">
+<link rel="import"href="bower_components/iron-flex-layout/iron-flex-layout-classes.html">
+<link rel="import" href="bower_components/iron-icons/maps-icons.html">
+<link rel="import" href="./bower_components/paper-button/paper-button.html">
+<link rel="import" href="tiny-book-list.html">
+<link rel="import" href="tiny-pouchdb.html">
+
+<dom-module id="tiny-app">
+	<template>
+        <style include="iron-flex"></style>
+        <style>
+			:host tiny-book-list {
+				padding-top: 5px;
+				padding-bottom: 5px;
+			}
+			
+			app-header{
+				background-color: #4285f4;
+				color: #fff;
+			}
+			
+			paper-button.buttonNew {
+				background-color : rgba(0,0,0,0);
+				color : white;
+                position: fixed;
+                right: 10px;
+			}
+		</style>
+		<tiny-pouchdb name="tiny-books" initsrc="books.json" books="{{elements}}" id="db"></tiny-pouchdb>
+		<app-header reveals>
+			<app-toolbar>
+                <div> Tiny Amazon </div>
+			</app-toolbar>
+		</app-header>
+		<div class="content flex">
+			<tiny-book-list books="{{elements}}">
+			</tiny-book-list>
+		</div>
+	</template>
+	<script>
+		class TinyApp extends Polymer.Element{
+			
+			static get is(){ return "tiny-app";}
+			static get properties(){
+				return {
+					elements:{
+						type: Array,
+						notify: true,
+					}
+				}
+			}
+			constructor(){
+				super();
+				console.log("TinyApp created");
+				
+			}
+		};
+		customElements.define(TinyApp.is,TinyApp);
+	</script>
+</dom-module>

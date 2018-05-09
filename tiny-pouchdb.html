@@ -1,0 +1,122 @@
+<!-- Component to create a pouchdb to store the books and initialize it from books.json -->
+<link rel="import" href="bower_components/polymer/polymer.html">
+
+<dom-module id="tiny-pouchdb">
+    <template>
+        <style>
+            :host {
+                display: none;
+            }
+        </style>
+    </template>
+    <script>
+        class TinyPouchDB extends Polymer.Element {
+            
+            static get is() { return "tiny-pouchdb"; }
+            static get properties() {
+                return {
+                    name: {
+                        type: String,
+                        reflectToAttribute: true,
+                        notify: true,
+                        value: "NO-NAME"
+                    },
+                    initsrc: {
+                        type: String
+                    },
+                    db: {
+                        type: Object,
+                        notify: true,
+                        value: null,
+                        observer: "_reload_books"
+                    },
+                    books: {
+                        type: Array,
+                        notify: true,
+                        value: []
+                    }
+                }
+            }
+            
+            constructor() {
+                super();
+                
+                const db = new PouchDB(this.name);
+                db.info().then(() => this.db = db);
+                self = this;
+
+                //Adding delete event
+                window.addEventListener('deleteObject', function (e) {
+                    db.remove(e.detail.model);
+                    self._reload_books();
+                });
+                
+                //Adding save event
+                window.addEventListener('saveObject', function (e) {
+                    let inputBook = e.detail.model;
+                    self.__loadImg(e.detail.image, book => {
+                        inputBook.img.data = book;
+                        //If the id isn't defined -> new book
+                        if(inputBook._id == undefined){
+                            db.post(inputBook).then(response => {
+                                console.log(response);
+                            });
+                        //Updating a book
+                        } else
+                        {
+                            db.get(inputBook._id).then(document => {
+                                e.detail.model._rev = document._rev;
+                                db.put(inputBook).then(response => {
+                                    console.log(response);
+                                });
+                            })
+                        }
+                        self._reload_books();
+                    });
+                });
+            }
+            
+            
+            //Load an image from an input type="file"
+            __loadImg(image, callback){
+                let fileReader = new FileReader;
+                fileReader.onload = function(e) {
+                    let fileImage = e.target.result;
+                    var base64 = 'data:' + image.type + ';base64,';
+                    return callback(fileImage.split(base64)[1]);
+                }
+                fileReader.readAsDataURL(image);
+            }
+            
+            //Reload the book, if they don't exist init the database
+            _reload_books() {
+                if (!this.db) return;
+                this.db.info().then(r => {
+                    if (r.update_seq === 0) {
+                        this._init_db_and_load_book();
+                    } else {
+                        this._load_books();
+                    }
+                });
+            }
+            
+            //Load the books from the db to this.books
+            _load_books() {
+                this.db.allDocs({ include_docs: true })
+                .then(r => this.books = r.rows.map(b => b.doc));
+            }
+            
+            //Init the dabase from a file and load the books
+            _init_db_and_load_book() {
+                fetch(this.initsrc).then(rep =>{ 
+                    rep.json().then(json => {
+                        this.db.bulkDocs(json).then(() => {
+                            this._load_books()
+                        })
+                    })
+                });
+            }            
+        };
+        customElements.define(TinyPouchDB.is, TinyPouchDB);
+    </script>
+</dom-module>
